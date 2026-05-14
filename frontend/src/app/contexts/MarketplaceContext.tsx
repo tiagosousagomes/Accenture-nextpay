@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Produto, Pedido, CarrinhoItem, StatusPedido } from '../types';
 import { useAuth } from './AuthContext';
 import { useBank } from './BankContext';
+import api from '../services/api';
 
 interface MarketplaceContextType {
   produtos: Produto[];
@@ -52,27 +53,19 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const loadProdutos = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/produtos');
-      if (response.ok) {
-        const data = await response.json();
-        console.log(data);
-        // Mapear do backend para o frontend
-        const mapped = data.map((p: any) => {
-          // Tentar capturar o ID do vendedor de várias formas comuns
-          const vId = (p.vendedorId || p.vendedor?.id || p.usuarioId || '').toString();
-          return {
-            id: (p.id || '').toString(),
-            nome: p.nome || 'Produto sem nome',
-            descricao: p.descricao || '',
-            preco: p.preco || 0,
-            estoque: p.quantidadeEstoque || 0,
-            imagem: p.fotoProduto || '',
-            vendedorId: vId,
-            vendedorNome: p.vendedor?.nome || (typeof p.vendedor === 'string' ? p.vendedor : 'Loja Parceira'),
-          };
-        });
-        setProdutos(mapped);
-      }
+      const response = await api.get('/api/produtos');
+      const data = response.data;
+      const mapped = data.map((p: any) => ({
+        id: (p.id || '').toString(),
+        nome: p.nome || 'Produto sem nome',
+        descricao: p.descricao || '',
+        preco: p.preco || 0,
+        estoque: p.quantidadeEstoque || 0,
+        imagem: p.fotoProduto || '',
+        vendedorId: (p.vendedor?.id || '').toString(),
+        vendedorNome: p.vendedor?.nome || 'Loja Parceira',
+      }));
+      setProdutos(mapped);
     } catch (err) {
       console.error('Erro ao carregar produtos:', err);
     } finally {
@@ -81,39 +74,31 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   };
 
   const loadPedidos = async () => {
+    if (!user) return;
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/pedidos');
-      if (response.ok) {
-        const data = await response.json();
-
-        // Mapear cada pedido do backend para o formato do frontend
-        const mapped = data.map((p: any) => {
-          const cId = (p.comprador?.id || p.compradorId || p.clienteId || '').toString();
-          const vId = (p.vendedor?.id || p.vendedorId || '').toString();
-
-          return {
-            id: (p.id || '').toString(),
-            clienteId: cId,
-            vendedorId: vId,
-            vendedorNome: p.vendedor?.nome || 'Loja Parceira',
-            produtoNome: p.produto?.nome || 'Produto',
-            itens: [{
-              produtoId: (p.produto?.id || p.produtoId || '').toString(),
-              quantidade: p.quantidade || 0,
-              precoUnitario: p.produto?.preco || 0
-            }],
-            total: p.valorTotal || 0,
-            status: p.status === 'RESERVADO' ? 'RESERVED' :
-              p.status === 'FINALIZADO' ? 'PAID' :
-                p.status === 'CANCELADO' ? 'CANCELED' :
-                  p.status === 'EXPIRADO' ? 'EXPIRED' : 'RESERVED',
-            dataCriacao: p.dataPedido || new Date().toISOString(),
-            dataPagamento: (p.status === 'FINALIZADO' || p.status === 'PAGO') ? p.dataPedido : undefined
-          };
-        });
-        setPedidos(mapped);
-      }
+      const response = await api.get('/api/pedidos');
+      const data = response.data;
+      const mapped = data.map((p: any) => ({
+        id: (p.id || '').toString(),
+        clienteId: (p.comprador?.id || '').toString(),
+        vendedorId: (p.vendedor?.id || '').toString(),
+        vendedorNome: p.vendedor?.nome || 'Loja Parceira',
+        produtoNome: p.produto?.nome || 'Produto',
+        itens: [{
+          produtoId: (p.produto?.id || '').toString(),
+          quantidade: p.quantidade || 0,
+          precoUnitario: p.produto?.preco || 0,
+        }],
+        total: p.valorTotal || 0,
+        status: p.status === 'RESERVADO' ? 'RESERVED'
+          : p.status === 'FINALIZADO' ? 'PAID'
+          : p.status === 'CANCELADO' ? 'CANCELED'
+          : 'RESERVED',
+        dataCriacao: p.dataPedido || new Date().toISOString(),
+        dataPagamento: p.status === 'FINALIZADO' ? p.dataPedido : undefined,
+      }));
+      setPedidos(mapped);
     } catch (err) {
       console.error('Erro ao carregar pedidos:', err);
     } finally {
@@ -123,44 +108,26 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   useEffect(() => {
     loadProdutos();
-    loadPedidos();
-
-    // Carregar status da loja
     const storedLojaStatus = localStorage.getItem('marketpay_loja_aberta');
-    if (storedLojaStatus !== null) {
-      setLojaAberta(JSON.parse(storedLojaStatus));
-    }
+    if (storedLojaStatus !== null) setLojaAberta(JSON.parse(storedLojaStatus));
   }, []);
 
-  const adicionarAoCarrinho = async (produto: Produto, quantidade: number, idPedido?: string): Promise<boolean> => {
+  useEffect(() => {
+    if (user) loadPedidos();
+  }, [user]);
+
+  const adicionarAoCarrinho = async (produto: Produto, quantidade: number): Promise<boolean> => {
     if (!user) return false;
     setIsLoading(true);
     try {
-      // Reservar no backend imediatamente
-      const payload = {
-        compradorId: parseInt(user.id),
+      const response = await api.post('/api/pedidos/reservar', {
         produtoId: parseInt(produto.id),
-        quantidade: quantidade
-      };
-
-      const response = await fetch('http://localhost:8080/api/pedidos/reservar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        quantidade,
       });
-
-      if (!response.ok) {
-        const errorMsg = await response.text();
-        console.error('Erro ao reservar produto:', errorMsg);
-        return false;
-      }
-
-      // Capturar o ID do pedido gerado pelo backend
-      const resData = await response.json();
-      const novoIdPedido = (resData.id || resData.pedidoId || '').toString();
+      const resData = response.data;
+      const novoIdPedido = (resData.id || '').toString();
 
       const itemExistente = carrinho.find(item => item.produto.id === produto.id);
-
       if (itemExistente) {
         setCarrinho(carrinho.map(item =>
           item.produto.id === produto.id
@@ -170,8 +137,6 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
       } else {
         setCarrinho([...carrinho, { idPedido: novoIdPedido, produto, quantidade }]);
       }
-
-      // Sincronizar estoque local
       await loadProdutos();
       return true;
     } catch (err) {
@@ -184,20 +149,16 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const removerDoCarrinho = async (produtoId: string) => {
     const item = carrinho.find(i => i.produto.id === produtoId);
-
     setIsLoading(true);
     if (item?.idPedido) {
       try {
-        await fetch(`http://localhost:8080/api/pedidos/${item.idPedido}/cancelar`, {
-          method: 'PUT'
-        });
+        await api.put(`/api/pedidos/${item.idPedido}/cancelar`);
       } catch (err) {
-        console.error('Erro ao cancelar reserva ao remover do carrinho:', err);
+        console.error('Erro ao cancelar reserva:', err);
       }
     }
-
     setCarrinho(carrinho.filter(item => item.produto.id !== produtoId));
-    await loadProdutos(); // Recarregar estoque
+    await loadProdutos();
     setIsLoading(false);
   };
 
@@ -211,28 +172,19 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   };
 
-  const limparCarrinho = () => {
-    setCarrinho([]);
-  };
+  const limparCarrinho = () => setCarrinho([]);
 
   const confirmarPagamento = async (itens: CarrinhoItem[]): Promise<boolean> => {
     if (!user) return false;
-
     setIsLoading(true);
     try {
       for (const item of itens) {
-        const response = await fetch(`http://localhost:8080/api/pedidos/${item.idPedido}/confirmar`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (!response.ok) return false;
+        await api.put(`/api/pedidos/${item.idPedido}/confirmar`);
       }
       await loadPedidos();
       await loadProdutos();
       limparCarrinho();
-
       window.dispatchEvent(new Event('atualizar-conta'));
-
       return true;
     } catch (err) {
       console.error('Erro ao confirmar pagamento:', err);
@@ -244,26 +196,12 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const confirmarPagamentoPedido = async (pedidoId: string): Promise<boolean> => {
     if (!user) return false;
-    const pedido = pedidos.find(p => p.id === pedidoId);
-    if (!pedido) return false;
-
     setIsLoading(true);
     try {
-      // Confirmar (Muda status para Finalizado)
-      const confirmResponse = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/confirmar`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!confirmResponse.ok) return false;
-
-      // Atualizar local
-      // Atualizar local
+      await api.put(`/api/pedidos/${pedidoId}/confirmar`);
       await loadPedidos();
       await loadProdutos();
-
       window.dispatchEvent(new Event('atualizar-conta'));
-
       return true;
     } catch (err) {
       console.error('Erro ao confirmar pagamento do pedido:', err);
@@ -275,8 +213,6 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const criarPedido = async (): Promise<string | null> => {
     if (!user || carrinho.length === 0) return null;
-
-    // O pedido já foi reservado no backend no momento de "Adicionar ao Carrinho"
     const novoPedido: Pedido = {
       id: `pedido_${Date.now()}`,
       clienteId: user.id,
@@ -287,17 +223,12 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         quantidade: item.quantidade,
         precoUnitario: item.produto.preco,
       })),
-      total: carrinho.reduce((sum, item) => sum + (item.produto.preco * item.quantidade), 0),
+      total: carrinho.reduce((sum, item) => sum + item.produto.preco * item.quantidade, 0),
       status: 'RESERVED',
       dataCriacao: new Date().toISOString(),
     };
-
-    const todosPedidos = [...pedidos, novoPedido];
-    setPedidos(todosPedidos);
-
-    // Sincronizar com o backend
+    setPedidos([...pedidos, novoPedido]);
     await loadPedidos();
-
     limparCarrinho();
     return novoPedido.id;
   };
@@ -305,16 +236,10 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const cancelarPedido = async (pedidoId: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/cancelar`, {
-        method: 'PUT'
-      });
-
-      if (response.ok) {
-        await loadPedidos();
-        await loadProdutos();
-        return true;
-      }
-      return false;
+      await api.put(`/api/pedidos/${pedidoId}/cancelar`);
+      await loadPedidos();
+      await loadProdutos();
+      return true;
     } catch (err) {
       console.error('Erro ao cancelar pedido:', err);
       return false;
@@ -326,44 +251,27 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const pagarPedido = (pedidoId: string): boolean => {
     const pedido = pedidos.find(p => p.id === pedidoId);
     if (!pedido || pedido.status !== 'RESERVED') return false;
-
-    const pedidosAtualizados = pedidos.map(p =>
+    setPedidos(pedidos.map(p =>
       p.id === pedidoId
         ? { ...p, status: 'PAID' as StatusPedido, dataPagamento: new Date().toISOString() }
         : p
-    );
-
-    setPedidos(pedidosAtualizados);
-    localStorage.setItem('marketpay_pedidos', JSON.stringify(pedidosAtualizados));
-
+    ));
     return true;
   };
 
   const adicionarProduto = async (produto: Partial<Produto>): Promise<boolean> => {
     if (!user) return false;
-    const currentUserId = user.id || (user as any).usuarioId;
-
     setIsLoading(true);
     try {
-      const payload = {
+      await api.post('/api/produtos', {
         nome: produto.nome,
         descricao: produto.descricao || '',
         preco: produto.preco,
         quantidadeEstoque: produto.estoque,
-        fotoProduto: produto.imagem || ''
-      };
-
-      const response = await fetch(`http://localhost:8080/api/produtos/usuario/${currentUserId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        fotoProduto: produto.imagem || '',
       });
-
-      if (response.ok) {
-        await loadProdutos();
-        return true;
-      }
-      return false;
+      await loadProdutos();
+      return true;
     } catch (err) {
       console.error('Erro ao adicionar produto:', err);
       return false;
@@ -374,51 +282,32 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   const atualizarProduto = async (id: string, produtoAtualizado: Partial<Produto>): Promise<boolean> => {
     if (!user) return false;
-    const currentUserId = user.id || (user as any).usuarioId;
-
     setIsLoading(true);
     try {
-      const payload = {
-        id: parseInt(id),
+      await api.put(`/api/produtos/${id}`, {
         nome: produtoAtualizado.nome,
         descricao: produtoAtualizado.descricao || '',
         preco: produtoAtualizado.preco,
         quantidadeEstoque: produtoAtualizado.estoque,
-        fotoProduto: produtoAtualizado.imagem || ''
-      };
-
-      const response = await fetch(`http://localhost:8080/api/produtos/${id}/usuario/${currentUserId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        fotoProduto: produtoAtualizado.imagem || '',
       });
-
-      if (response.ok) {
-        await loadProdutos();
-        return true;
-      }
-      return false;
+      await loadProdutos();
+      return true;
     } catch (err) {
       console.error('Erro ao atualizar produto:', err);
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const removerProduto = async (id: string): Promise<boolean> => {
     if (!user) return false;
-    const currentUserId = user.id || (user as any).usuarioId;
-
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/produtos/${id}/usuario/${currentUserId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        await loadProdutos();
-        return true;
-      }
-      return false;
+      await api.delete(`/api/produtos/${id}`);
+      await loadProdutos();
+      return true;
     } catch (err) {
       console.error('Erro ao remover produto:', err);
       return false;
@@ -427,22 +316,16 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   };
 
-  const getPedidosByCliente = (clienteId: string) => {
-    return pedidos.filter(p => p.clienteId === clienteId);
-  };
+  const getProdutosByVendedor = (vendedorId: string) =>
+    produtos.filter(p => (p.vendedorId || '').toString() === (vendedorId || '').toString());
 
-  const getPedidosByVendedor = (vendedorId: string) => {
-    return pedidos.filter(p => p.vendedorId === vendedorId);
-  };
+  const getPedidosByCliente = (clienteId: string) =>
+    pedidos.filter(p => p.clienteId === clienteId);
 
-  const getAllPedidos = () => {
-    return pedidos;
-  };
+  const getPedidosByVendedor = (vendedorId: string) =>
+    pedidos.filter(p => p.vendedorId === vendedorId);
 
-  const getProdutosByVendedor = (vendedorId: string) => {
-    const idToMatch = vendedorId?.toString() || '';
-    return produtos.filter(p => (p.vendedorId || '').toString() === idToMatch);
-  };
+  const getAllPedidos = () => pedidos;
 
   const toggleLoja = () => {
     const novoStatus = !lojaAberta;
