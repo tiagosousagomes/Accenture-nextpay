@@ -73,10 +73,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (response.ok) {
         const userData = await response.json();
-        
-  
+
         if (userData) {
           userData.id = (userData.id || userData.usuarioId)?.toString();
+          // Preserve existing createdAt from localStorage if API doesn't return it
+          const existing = localStorage.getItem('marketpay_user');
+          if (existing) {
+            try {
+              const parsed = JSON.parse(existing);
+              if (parsed.email === userData.email && parsed.createdAt) {
+                userData.createdAt = parsed.createdAt;
+              }
+            } catch (_) {}
+          }
+          if (!userData.createdAt) {
+            userData.createdAt = new Date().toISOString();
+          }
         }
 
         setUser(userData);
@@ -138,13 +150,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
-    localStorage.setItem('marketpay_user', JSON.stringify(updatedUser));
+    try {
+      localStorage.setItem('marketpay_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.error('Erro ao salvar perfil no localStorage:', e);
+    }
 
     const users = JSON.parse(localStorage.getItem('marketpay_users') || '[]');
     const updatedUsers = users.map((u: any) =>
       u.id === user.id ? { ...u, ...data } : u
     );
-    localStorage.setItem('marketpay_users', JSON.stringify(updatedUsers));
+    try {
+      localStorage.setItem('marketpay_users', JSON.stringify(updatedUsers));
+    } catch (_) {}
   };
 
   return (

@@ -106,8 +106,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <div className="absolute bottom-0 w-64 p-6 border-t border-white/20">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <User size={20} />
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+              {user?.fotoPerfil ? (
+                <img src={user.fotoPerfil} alt="Perfil" className="w-full h-full object-cover" />
+              ) : (
+                <User size={20} />
+              )}
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm">{user?.nome} {user?.sobrenome}</p>

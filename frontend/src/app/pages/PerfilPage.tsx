@@ -3,10 +3,8 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import {
   User,
-  Mail,
   MapPin,
   CreditCard,
-  Store,
   Calendar,
   Award,
   Coins,
@@ -25,20 +23,19 @@ export const PerfilPage: React.FC = () => {
     nome: '',
     sobrenome: '',
     endereco: '',
-    nomeLoja: '',
-    descricaoLoja: '',
   });
 
   useEffect(() => {
     const fetchUserData = async () => {
       if (user?.id) {
         try {
-          const response = await fetch(`http://localhost:8080/api/usuarios/${user.id}`);
+          const response = await fetch(`http://localhost:8080/api/usuarios/${user.id}`, {
+            headers: { Authorization: `Bearer ${user.token}` },
+          });
           if (response.ok) {
             const data = await response.json();
             setApiUser(data);
 
-            // Formatar endereço se for um objeto
             let enderecoStr = '';
             if (data.endereco && typeof data.endereco === 'object') {
               const { logradouro, numero, bairro, localidade, uf } = data.endereco;
@@ -49,10 +46,8 @@ export const PerfilPage: React.FC = () => {
 
             setFormData({
               nome: data.nome || user?.nome || '',
-              sobrenome: user?.sobrenome || '', // API não parece retornar sobrenome separado
+              sobrenome: user?.sobrenome || '',
               endereco: enderecoStr,
-              nomeLoja: user?.nomeLoja || '',
-              descricaoLoja: user?.descricaoLoja || '',
             });
           }
         } catch (error) {
@@ -66,8 +61,28 @@ export const PerfilPage: React.FC = () => {
     fetchUserData();
   }, [user]);
 
-  const handleSalvar = () => {
-    updateProfile(formData);
+  const handleSalvar = async () => {
+    const fotoAtual = fotoPreview || user?.fotoPerfil || '';
+    updateProfile({ ...formData, fotoPerfil: fotoAtual });
+
+    try {
+      const rawBase64 = fotoAtual.replace(/^data:image\/\w+;base64,/, '');
+      await fetch(`http://localhost:8080/api/usuarios/${user!.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: JSON.stringify({
+          nome: formData.nome,
+          fotoPerfil: rawBase64 || null,
+        }),
+      });
+    } catch (e) {
+      console.error('Erro ao sincronizar perfil com o backend:', e);
+    }
+
+    setFotoPreview('');
     toast.success('Perfil atualizado com sucesso!');
     setEditando(false);
   };
@@ -83,10 +98,9 @@ export const PerfilPage: React.FC = () => {
         nome: apiUser.nome || user?.nome || '',
         sobrenome: user?.sobrenome || '',
         endereco: enderecoStr,
-        nomeLoja: user?.nomeLoja || '',
-        descricaoLoja: user?.descricaoLoja || '',
       });
     }
+    setFotoPreview('');
     setEditando(false);
   };
 
@@ -101,9 +115,19 @@ export const PerfilPage: React.FC = () => {
     );
   }
 
+  const fotoPerfil = fotoPreview || user?.fotoPerfil || apiUser?.fotoPerfilUrl || '';
+
   const nivelColor = apiUser?.nivel === 'OURO' ? 'text-yellow-600 bg-yellow-50' :
     apiUser?.nivel === 'DIAMANTE' ? 'text-blue-600 bg-blue-50' :
       apiUser?.nivel === 'PRATA' ? 'text-gray-600 bg-gray-50' : 'text-orange-600 bg-orange-50';
+
+  const formatarDataCriacao = () => {
+    const dateStr = user?.createdAt;
+    if (!dateStr) return 'N/D';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'N/D';
+    return date.toLocaleDateString('pt-BR');
+  };
 
   return (
     <Layout>
@@ -132,48 +156,54 @@ export const PerfilPage: React.FC = () => {
               <div className="h-32 bg-gradient-to-br from-petroleo-900 via-petroleo-800 to-petroleo-700 relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                   <div className="w-24 h-24 bg-white rounded-2xl p-1 shadow-2xl">
-                    <div className="w-full h-full bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
-                      {(fotoPreview || apiUser?.fotoPerfilUrl) ? (
-                          <img
-                            src={fotoPreview || apiUser?.fotoPerfilUrl}
-                            alt="Perfil"
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        ) : (
-                          <User className="text-petroleo-700" size={48} />
-                        )}
+                    <div className="w-full h-full bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
+                      {fotoPerfil ? (
+                        <img
+                          src={fotoPerfil}
+                          alt="Perfil"
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <User className="text-petroleo-700" size={48} />
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="pt-16 pb-8 px-6 text-center">
-                 {editando && (
-                    <div className="mb-4 flex justify-center">
-                      <label className="cursor-pointer bg-white rounded-lg px-4 py-2 shadow-md text-sm font-bold text-petroleo-700 hover:bg-gray-100 transition border border-gray-200">
-                        Alterar Foto
-
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-
-                            if (file) {
-                              const reader = new FileReader();
-
-                              reader.onloadend = () => {
-                                setFotoPreview(reader.result as string);
+                {editando && (
+                  <div className="mb-4 flex justify-center">
+                    <label className="cursor-pointer bg-white rounded-lg px-4 py-2 shadow-md text-sm font-bold text-petroleo-700 hover:bg-gray-100 transition border border-gray-200">
+                      Alterar Foto
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              const img = new Image();
+                              img.onload = () => {
+                                const MAX = 300;
+                                const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width * scale;
+                                canvas.height = img.height * scale;
+                                canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                setFotoPreview(canvas.toDataURL('image/jpeg', 0.75));
                               };
-
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
-                    </div>
-                  )}
+                              img.src = reader.result as string;
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
                 <h2 className="text-2xl font-bold text-gray-900">{apiUser?.nome || user?.nome}</h2>
                 <p className="text-gray-500 font-medium text-sm mt-1">{apiUser?.email}</p>
 
@@ -200,9 +230,7 @@ export const PerfilPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Membro desde</span>
-                  <span className="font-semibold text-gray-800">
-                    {user ? new Date(user.createdAt).toLocaleDateString('pt-BR') : 'Maio 2024'}
-                  </span>
+                  <span className="font-semibold text-gray-800">{formatarDataCriacao()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Último Acesso</span>
@@ -275,48 +303,6 @@ export const PerfilPage: React.FC = () => {
                         <span className="text-gray-800 font-medium">{formData.endereco || 'Endereço não cadastrado'}</span>
                       </div>
                     )}
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-50 mt-8">
-                    <h4 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Store size={20} className="text-petroleo-700" />
-                      Configurações de Loja
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Nome da Vitrine</label>
-                        {editando ? (
-                          <input
-                            type="text"
-                            value={formData.nomeLoja}
-                            onChange={(e) => setFormData({ ...formData, nomeLoja: e.target.value })}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-petroleo-500 outline-none transition-all"
-                            placeholder="Minha Loja Online"
-                          />
-                        ) : (
-                          <div className="px-4 py-3 bg-gray-50 rounded-xl font-medium text-gray-800">
-                            {user?.nomeLoja || 'Não configurado'}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Bio/Descrição</label>
-                        {editando ? (
-                          <input
-                            type="text"
-                            value={formData.descricaoLoja}
-                            onChange={(e) => setFormData({ ...formData, descricaoLoja: e.target.value })}
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-petroleo-500 outline-none transition-all"
-                            placeholder="O que você oferece?"
-                          />
-                        ) : (
-                          <div className="px-4 py-3 bg-gray-50 rounded-xl font-medium text-gray-800 truncate">
-                            {user?.descricaoLoja || 'Sem descrição definida'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   </div>
 
                   {editando && (

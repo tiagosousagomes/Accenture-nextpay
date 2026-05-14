@@ -16,6 +16,7 @@ export interface Cliente {
   fotoPerfil?: string;
   nomeLoja?: string;
   descricaoLoja?: string;
+  token?: string;
 }
 
 export interface ContaCorrente {
