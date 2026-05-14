@@ -174,8 +174,8 @@ export const CadastroPage: React.FC = () => {
         });
 
       if (response.ok) {
-        toast.success('Conta criada com sucesso!');
-        navigate('/login');
+        toast.success('Código enviado para seu e-mail!');
+        navigate('/confirmar-email', { state: { email: formData.email } });
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Erro ao cadastrar usuário');

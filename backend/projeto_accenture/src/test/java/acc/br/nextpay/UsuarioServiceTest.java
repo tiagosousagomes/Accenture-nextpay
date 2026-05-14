@@ -2,6 +2,7 @@ package acc.br.nextpay;
 
 import acc.br.nextpay.model.Usuario;
 import acc.br.nextpay.repository.UsuarioRepository;
+import acc.br.nextpay.service.EmailService;
 import acc.br.nextpay.service.UsuarioService;
 import acc.br.nextpay.service.ViaCepService;
 import org.junit.jupiter.api.Assertions;
@@ -24,6 +25,7 @@ class UsuarioServiceTest {
     private UsuarioRepository repository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ViaCepService viaCepService;
+    @Mock private EmailService emailService;
 
     @Test
     void deveCadastrarComSucesso() {

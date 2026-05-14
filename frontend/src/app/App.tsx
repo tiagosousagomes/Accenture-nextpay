@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { CadastroPage } from './pages/CadastroPage';
+import { ConfirmarEmailPage } from './pages/ConfirmarEmailPage';
 import { RecuperarSenhaPage } from './pages/RecuperarSenhaPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ContaCorrentePage } from './pages/ContaCorrentePage';
@@ -40,6 +41,7 @@ export default function App() {
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/cadastro" element={<CadastroPage />} />
+                <Route path="/confirmar-email" element={<ConfirmarEmailPage />} />
                 <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
 
               <Route

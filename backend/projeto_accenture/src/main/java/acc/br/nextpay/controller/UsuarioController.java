@@ -1,5 +1,6 @@
 package acc.br.nextpay.controller;
 
+import acc.br.nextpay.dto.ConfirmacaoEmailDTO;
 import acc.br.nextpay.dto.UsuarioResponse;
 import acc.br.nextpay.model.Usuario;
 import acc.br.nextpay.service.UsuarioService;
@@ -57,6 +58,12 @@ public class UsuarioController {
 
         Usuario atualizado = usuarioService.atualizarUsuario(id, getUsuarioIdAutenticado(), usuario);
         return ResponseEntity.ok(UsuarioResponse.from(atualizado));
+    }
+
+    @PostMapping("/confirmar-email")
+    public ResponseEntity<String> confirmarEmail(@RequestBody ConfirmacaoEmailDTO dto) {
+        usuarioService.confirmarCodigoEmail(dto.getEmail(), dto.getCodigo());
+        return ResponseEntity.ok("Cadastro realizado com sucesso.");
     }
 
     private Long getUsuarioIdAutenticado() {

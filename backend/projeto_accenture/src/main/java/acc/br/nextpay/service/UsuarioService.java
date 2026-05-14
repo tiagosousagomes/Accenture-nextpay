@@ -23,6 +23,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final ViaCepService viaCepService;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Transactional
     public Usuario cadastrarUsuario(Usuario usuario, String cep, String numero) {
@@ -51,7 +52,57 @@ public class UsuarioService {
 
         usuario.setConta(conta);
 
-        return usuarioRepository.save(usuario);
+        String token = String.valueOf((int) (Math.random() * 900000) + 100000);
+        usuario.setTokenConfirmacao(token);
+        usuario.setEmailConfirmado(false);
+
+        Usuario usuarioSalvo = usuarioRepository.save(usuario);
+
+        try {
+            emailService.enviarEmail(
+                usuarioSalvo.getEmail(),
+                "Código de confirmação - NextPay",
+                "Olá, " + usuarioSalvo.getNome() + "!\n\n" +
+                "Seu código de confirmação é:\n\n" +
+                token + "\n\n" +
+                "Digite esse código na tela de confirmação para ativar sua conta."
+            );
+        } catch (Exception e) {
+            System.out.println("Erro ao enviar e-mail de confirmação: " + e.getMessage());
+        }
+
+        return usuarioSalvo;
+    }
+
+    @Transactional
+    public void confirmarCodigoEmail(String email, String codigo) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
+
+        if (usuario.isEmailConfirmado()) {
+            throw new NegocioException("E-mail já confirmado.");
+        }
+
+        if (usuario.getTokenConfirmacao() == null ||
+                !usuario.getTokenConfirmacao().equals(codigo)) {
+            throw new NegocioException("Código de confirmação inválido.");
+        }
+
+        usuario.setEmailConfirmado(true);
+        usuario.setTokenConfirmacao(null);
+        usuarioRepository.save(usuario);
+
+        try {
+            emailService.enviarEmail(
+                usuario.getEmail(),
+                "Conta criada com sucesso - NextPay",
+                "Olá, " + usuario.getNome() + "!\n\n" +
+                "Sua conta foi confirmada e criada com sucesso.\n\n" +
+                "Agora você já pode acessar o NextPay."
+            );
+        } catch (Exception e) {
+            System.out.println("Erro ao enviar e-mail de conta criada: " + e.getMessage());
+        }
     }
 
     public Usuario login(String email, String senha) {
