@@ -5,6 +5,7 @@ import acc.br.nextpay.ai.DocumentChunk;
 import acc.br.nextpay.model.*;
 import acc.br.nextpay.model.enums.*;
 import acc.br.nextpay.repository.*;
+import acc.br.nextpay.security.JwtUtil;
 import acc.br.nextpay.service.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class NextPayApplicationTests {
     @Autowired private MockMvc mockMvc;
     @Autowired private TransacaoService transacaoService;
     @Autowired private UsuarioService usuarioService;
+    @Autowired private JwtUtil jwtUtil;
 
     @MockitoBean private UsuarioRepository usuarioRepository;
     @MockitoBean private TransacaoRepository transacaoRepository;
@@ -47,16 +49,20 @@ class NextPayApplicationTests {
         Usuario u = new Usuario();
         u.setId(1L);
         u.setNome("User");
-        Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(u));
-        mockMvc.perform(get("/api/usuarios/1")).andExpect(status().isOk());
-
         u.setEmail("a@a.com");
         u.setSenha("senha_hash");
+
+        // Generate a real JWT so JwtFilter can validate it and set the authentication principal
+        String token = jwtUtil.gerarToken(1L, "a@a.com");
+
+        Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(u));
+
+        mockMvc.perform(get("/api/usuarios/1")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+
         Mockito.when(usuarioRepository.findByEmail("a@a.com")).thenReturn(Optional.of(u));
-
         Mockito.when(passwordEncoder.matches(Mockito.anyString(), Mockito.eq("senha_hash"))).thenReturn(true);
-
-        Mockito.when(passwordEncoder.matches("123", "senha_hash")).thenReturn(true);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,8 +108,7 @@ class NextPayApplicationTests {
     }
 
     @Test
-    void testeEnumsEMain() {
-        NextPayApplication.main(new String[] {});
+    void testeEnums() {
         for (TipoUsuario t : TipoUsuario.values()) Assertions.assertNotNull(TipoUsuario.valueOf(t.name()));
         for (StatusPedido s : StatusPedido.values()) Assertions.assertNotNull(StatusPedido.valueOf(s.name()));
     }

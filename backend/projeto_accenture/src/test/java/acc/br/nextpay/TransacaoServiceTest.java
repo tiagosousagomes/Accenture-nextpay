@@ -29,46 +29,60 @@ class TransacaoServiceTest {
 
     @Test
     void testSacarComSucesso() {
+        ContaCorrente conta = ContaCorrente.builder()
+                .id(10L).saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build();
         Usuario u = new Usuario();
         u.setId(1L);
-        // Saldo de 100, sacando 50
-        u.setConta(ContaCorrente.builder().saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build());
+        u.setConta(conta);
 
         Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(u));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(10L)).thenReturn(Optional.of(conta));
 
         transacaoService.sacar(1L, BigDecimal.valueOf(50));
 
-        assertEquals(BigDecimal.valueOf(50), u.getConta().getSaldo());
+        assertEquals(BigDecimal.valueOf(50), conta.getSaldo());
     }
 
     @Test
     void testPixComSucesso() {
+        ContaCorrente contaOrigem = ContaCorrente.builder()
+                .id(1L).saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build();
         Usuario origem = new Usuario(); origem.setId(1L);
-        origem.setConta(ContaCorrente.builder().saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build());
+        origem.setConta(contaOrigem);
 
+        ContaCorrente contaDestino = ContaCorrente.builder()
+                .id(2L).saldo(BigDecimal.ZERO).build();
         Usuario destino = new Usuario(); destino.setId(2L); destino.setNome("Destino");
-        destino.setConta(ContaCorrente.builder().saldo(BigDecimal.ZERO).build());
+        destino.setConta(contaDestino);
 
         Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(origem));
         Mockito.when(usuarioRepository.findByEmail("pix@teste.com")).thenReturn(Optional.of(destino));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(1L)).thenReturn(Optional.of(contaOrigem));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(2L)).thenReturn(Optional.of(contaDestino));
 
         String msg = transacaoService.pix(1L, "pix@teste.com", BigDecimal.valueOf(50));
 
         assertEquals("PIX realizado com sucesso.", msg);
-        assertEquals(BigDecimal.valueOf(50), origem.getConta().getSaldo());
-        assertEquals(BigDecimal.valueOf(50), destino.getConta().getSaldo());
+        assertEquals(BigDecimal.valueOf(50), contaOrigem.getSaldo());
+        assertEquals(BigDecimal.valueOf(50), contaDestino.getSaldo());
     }
 
     @Test
     void testTransferenciaComSucesso() {
+        ContaCorrente contaOrigem = ContaCorrente.builder()
+                .id(1L).saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build();
         Usuario origem = new Usuario(); origem.setId(1L);
-        origem.setConta(ContaCorrente.builder().saldo(BigDecimal.valueOf(100)).limite(BigDecimal.ZERO).build());
+        origem.setConta(contaOrigem);
 
+        ContaCorrente contaDestino = ContaCorrente.builder()
+                .id(2L).saldo(BigDecimal.ZERO).build();
         Usuario destino = new Usuario(); destino.setId(2L); destino.setNome("Destino");
-        destino.setConta(ContaCorrente.builder().saldo(BigDecimal.ZERO).build());
+        destino.setConta(contaDestino);
 
         Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(origem));
         Mockito.when(usuarioRepository.findById(2L)).thenReturn(Optional.of(destino));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(1L)).thenReturn(Optional.of(contaOrigem));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(2L)).thenReturn(Optional.of(contaDestino));
 
         String msg = transacaoService.transferir(1L, 2L, BigDecimal.valueOf(50));
 
@@ -111,12 +125,14 @@ class TransacaoServiceTest {
 
     @Test
     void testDepositarComSucesso() {
+        ContaCorrente conta = ContaCorrente.builder().id(10L).saldo(BigDecimal.ZERO).build();
         Usuario u = new Usuario(); u.setId(1L);
-        u.setConta(ContaCorrente.builder().saldo(BigDecimal.ZERO).build());
+        u.setConta(conta);
         Mockito.when(usuarioRepository.findById(1L)).thenReturn(Optional.of(u));
+        Mockito.when(contaCorrenteRepository.findByIdWithLock(10L)).thenReturn(Optional.of(conta));
 
         transacaoService.depositar(1L, BigDecimal.valueOf(100));
-        assertEquals(BigDecimal.valueOf(100), u.getConta().getSaldo());
+        assertEquals(BigDecimal.valueOf(100), conta.getSaldo());
     }
 
     @Test

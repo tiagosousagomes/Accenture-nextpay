@@ -77,6 +77,6 @@ class ProdutoServiceTest {
         assertDoesNotThrow(() -> produtoService.excluirProduto(10L, 1L));
 
         Mockito.verify(produtoRepository).save(p);
-        assertEquals(0, p.getQuantidadeEstoque());
+        assertFalse(p.isAtivo());
     }
 }
