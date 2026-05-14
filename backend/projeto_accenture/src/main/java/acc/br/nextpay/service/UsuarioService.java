@@ -68,7 +68,12 @@ public class UsuarioService {
                 "Digite esse código na tela de confirmação para ativar sua conta."
             );
         } catch (Exception e) {
-            System.out.println("Erro ao enviar e-mail de confirmação: " + e.getMessage());
+            System.out.println("\n==================================================");
+            System.out.println("  [DEV] EMAIL NÃO ENVIADO - USE ESTE CÓDIGO:");
+            System.out.println("  Email : " + usuarioSalvo.getEmail());
+            System.out.println("  Código: " + token);
+            System.out.println("  Causa : " + e.getMessage());
+            System.out.println("==================================================\n");
         }
 
         return usuarioSalvo;
