@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ContaCorrente, Transacao } from '../types';
 import { useAuth } from './AuthContext';
+import api from '../services/api';
 
 interface BankContextType {
   conta: ContaCorrente | null;
@@ -42,41 +43,34 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const currentUserId = user.id || (user as any).usuarioId;
       if (!currentUserId) return;
 
-      const response = await fetch(`http://localhost:8080/api/usuarios/${currentUserId}`);
-      if (response.ok) {
-        const fullUserData = await response.json();
+      const userResponse = await api.get(`/api/usuarios/${currentUserId}`);
+      const fullUserData = userResponse.data;
 
-        // Mapear os dados do backend para o formato esperado pelo frontend
-        if (fullUserData.conta) {
-          const mappedConta: ContaCorrente = {
-            id: fullUserData.conta.id.toString(),
-            numero: fullUserData.conta.numeroConta,
-            saldo: fullUserData.conta.saldo,
-            dataCriacao: new Date().toISOString(), // O backend não parece retornar a data de criação, usamos a atual ou mantemos opcional
-            clienteId: fullUserData.id.toString()
-          };
-          setConta(mappedConta);
-        }
-
-        // Buscar transações do backend
-        const transResponse = await fetch(`http://localhost:8080/api/transacoes/usuario/${currentUserId}`);
-        if (transResponse.ok) {
-          const transData = await transResponse.json();
-          // Mapear transações do backend para o formato do frontend
-          const mappedTransacoes: Transacao[] = transData.map((t: any) => ({
-            id: t.id.toString(),
-            tipo: t.tipo.toLowerCase() as any,
-            valor: t.valor,
-            data: t.data,
-            descricao: t.descricao,
-            contaId: t.usuario.id.toString(),
-            status: 'sucesso'
-          }));
-          setTransacoes(mappedTransacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()));
-        } else {
-          setTransacoes([]);
-        }
+      if (fullUserData.conta) {
+        const mappedConta: ContaCorrente = {
+          id: fullUserData.conta.id.toString(),
+          numero: fullUserData.conta.numeroConta,
+          saldo: fullUserData.conta.saldo,
+          dataCriacao: new Date().toISOString(),
+          clienteId: fullUserData.id.toString(),
+        };
+        setConta(mappedConta);
       }
+
+      const transResponse = await api.get('/api/transacoes');
+      const transData = transResponse.data;
+      const mappedTransacoes: Transacao[] = transData.map((t: any) => ({
+        id: t.id.toString(),
+        tipo: t.tipo.toLowerCase() as any,
+        valor: t.valor,
+        data: t.data,
+        descricao: t.descricao,
+        contaId: t.usuario.id.toString(),
+        status: 'sucesso',
+      }));
+      setTransacoes(
+        mappedTransacoes.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+      );
     } catch (error) {
       console.error('Erro ao carregar dados da conta:', error);
     } finally {
@@ -89,52 +83,21 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   useEffect(() => {
-    const atualizar = () => {
-      loadConta();
-  };
-
-  window.addEventListener('atualizar-conta', atualizar);
-
-  return () => {
-    window.removeEventListener('atualizar-conta', atualizar);
-  };
+    const atualizar = () => loadConta();
+    window.addEventListener('atualizar-conta', atualizar);
+    return () => window.removeEventListener('atualizar-conta', atualizar);
   }, [user]);
 
-  const refreshConta = () => {
-    loadConta();
-  };
+  const refreshConta = () => loadConta();
 
   const depositar = async (valor: number): Promise<boolean> => {
     if (!user || valor <= 0) return false;
 
     setIsLoading(true);
     try {
-      // Tenta obter o ID de várias fontes possíveis
-      const currentUserId = user.id || (user as any).usuarioId;
-
-      if (!currentUserId) {
-        console.error('BankContext: Nenhum ID encontrado no objeto de usuário!', user);
-        return false;
-      }
-
-      const payload = {
-        usuarioId: currentUserId,
-        usuarioOrigemId: currentUserId,
-        usuarioDestinoId: currentUserId,
-        valor: valor
-      };
-
-      const response = await fetch('http://localhost:8080/api/carteiras/deposito', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        refreshConta();
-        return true;
-      }
-      return false;
+      await api.post('/api/carteiras/deposito', { valor });
+      refreshConta();
+      return true;
     } catch (error) {
       console.error('Erro no depósito:', error);
       return false;
@@ -148,26 +111,9 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setIsLoading(true);
     try {
-      const currentUserId = user.id || (user as any).usuarioId;
-
-      const payload = {
-        usuarioId: currentUserId,
-        usuarioOrigemId: currentUserId,
-        usuarioDestinoId: currentUserId,
-        valor: valor
-      };
-
-      const response = await fetch('http://localhost:8080/api/carteiras/saque', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        refreshConta();
-        return true;
-      }
-      return false;
+      await api.post('/api/carteiras/saque', { valor });
+      refreshConta();
+      return true;
     } catch (error) {
       console.error('Erro no saque:', error);
       return false;
@@ -176,31 +122,14 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const transferir = async (contaDestinoNumero: string, valor: number): Promise<boolean> => {
+  const transferir = async (usuarioDestinoId: string, valor: number): Promise<boolean> => {
     if (!user || !conta || valor <= 0 || conta.saldo < valor) return false;
 
     setIsLoading(true);
     try {
-      const currentUserId = user.id || (user as any).usuarioId;
-
-      const payload = {
-        usuarioId: currentUserId,
-        usuarioOrigemId: currentUserId,
-        usuarioDestinoId: contaDestinoNumero,
-        valor: valor
-      };
-
-      const response = await fetch('http://localhost:8080/api/carteiras/transferencia', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        refreshConta();
-        return true;
-      }
-      return false;
+      await api.post('/api/carteiras/transferencia', { usuarioDestinoId, valor });
+      refreshConta();
+      return true;
     } catch (error) {
       console.error('Erro na transferência:', error);
       return false;
@@ -214,31 +143,14 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setIsLoading(true);
     try {
-      const currentUserId = user.id || (user as any).usuarioId;
-
-      const payload = {
-        usuarioId: currentUserId,
-        usuarioOrigemId: currentUserId,
-        chavePix: chavePix,
-        valor: valor
-      };
-
-      const response = await fetch('http://localhost:8080/api/carteiras/pix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        refreshConta();
-        return true;
-      }
-      return false;
+      await api.post('/api/carteiras/pix', { chavePix, valor });
+      refreshConta();
+      return true;
     } catch (error) {
-        console.error('Erro no PIX:', error);
-        return false;
-      } finally {
-        setIsLoading(false);
+      console.error('Erro no PIX:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -256,17 +168,19 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <BankContext.Provider value={{
-      conta,
-      transacoes,
-      depositar,
-      sacar,
-      transferir,
-      pix,
-      pagarPedido,
-      refreshConta,
-      isLoading,
-    }}>
+    <BankContext.Provider
+      value={{
+        conta,
+        transacoes,
+        depositar,
+        sacar,
+        transferir,
+        pix,
+        pagarPedido,
+        refreshConta,
+        isLoading,
+      }}
+    >
       {children}
     </BankContext.Provider>
   );

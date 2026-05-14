@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { useBank } from '../contexts/BankContext';
+import api from '../services/api';
 import {
   Wallet,
   ArrowDownCircle,
@@ -192,29 +193,15 @@ export const ContaCorrentePage: React.FC = () => {
 
   const buscarChavePix = async () => {
     try {
-
-      const response = await fetch(
-        `http://localhost:8080/api/carteiras/pix/buscar?chave=${chavePix}`
-      );
-
-      if (!response.ok) {
-        toast.error('Chave PIX não encontrada');
-
-        setDestinatarioPix(null);
-        setConfirmandoPix(false);
-
-        return;
-      }
-
-      const data = await response.json();
-
-      setDestinatarioPix(data);
+      const response = await api.get('/api/carteiras/pix/buscar', { params: { chave: chavePix } });
+      setDestinatarioPix(response.data);
       setConfirmandoPix(true);
-
     } catch (error) {
-      toast.error('Erro ao buscar chave PIX');
+      toast.error('Chave PIX não encontrada');
+      setDestinatarioPix(null);
+      setConfirmandoPix(false);
     }
-};
+  };
 
   return (
     <Layout>

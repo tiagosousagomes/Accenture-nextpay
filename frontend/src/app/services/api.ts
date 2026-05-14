@@ -14,7 +14,9 @@ api.interceptors.request.use(
     const userString = localStorage.getItem('marketpay_user');
     if (userString) {
       const user = JSON.parse(userString);
-      config.headers['X-User-Id'] = user.id;
+      if (user.token) {
+        config.headers['Authorization'] = `Bearer ${user.token}`;
+      }
     }
     return config;
   },
