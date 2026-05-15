@@ -7,6 +7,7 @@ interface RewardsContextType {
   adicionarMoedas: (quantidade: number) => void;
   usarMoedas: (quantidade: number) => boolean;
   adicionarTransacao: (tipo: 'compra' | 'venda', valor: number) => void;
+  adicionarTransacaoOutroUsuario: (userId: string, tipo: 'compra' | 'venda', valor: number) => void;
   calcularRecompensaCompra: (valorCompra: number) => number;
   calcularDescontoNivel: () => number;
 }
@@ -92,6 +93,31 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
     saveRewards(newRewards);
   };
 
+  const adicionarTransacaoOutroUsuario = (userId: string, tipo: 'compra' | 'venda', valor: number) => {
+    const allRewards = JSON.parse(localStorage.getItem('marketpay_rewards') || '{}');
+    const userRewards = allRewards[userId] || {
+      moedas: 0,
+      totalTransacoes: 0,
+      nivel: 'bronze',
+      totalGasto: 0,
+      totalVendido: 0,
+    };
+
+    const novoTotal = userRewards.totalTransacoes + 1;
+    const novoNivel = calcularNivel(novoTotal);
+
+    const newRewards = {
+      ...userRewards,
+      totalTransacoes: novoTotal,
+      nivel: novoNivel,
+      totalGasto: tipo === 'compra' ? userRewards.totalGasto + valor : userRewards.totalGasto,
+      totalVendido: tipo === 'venda' ? userRewards.totalVendido + valor : userRewards.totalVendido,
+    };
+
+    allRewards[userId] = newRewards;
+    localStorage.setItem('marketpay_rewards', JSON.stringify(allRewards));
+  };
+
   const calcularRecompensaCompra = (valorCompra: number): number => {
     if (!rewards) return 0;
 
@@ -113,6 +139,7 @@ export const RewardsProvider: React.FC<{ children: ReactNode }> = ({ children })
       adicionarMoedas,
       usarMoedas,
       adicionarTransacao,
+      adicionarTransacaoOutroUsuario,
       calcularRecompensaCompra,
       calcularDescontoNivel,
     }}>

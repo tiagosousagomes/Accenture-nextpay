@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Produto, Pedido, CarrinhoItem, StatusPedido } from '../types';
 import { useAuth } from './AuthContext';
 import { useBank } from './BankContext';
+import { useRewards } from './RewardsContext';
 import api from '../services/api';
 
 interface MarketplaceContextType {
@@ -49,6 +50,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [lojaAberta, setLojaAberta] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { transferir, pix } = useBank();
+  const { adicionarTransacaoOutroUsuario } = useRewards();
 
   const loadProdutos = async () => {
     setIsLoading(true);
@@ -202,6 +204,13 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
       await loadPedidos();
       await loadProdutos();
       window.dispatchEvent(new Event('atualizar-conta'));
+
+      // Adicionar transação para o vendedor
+      const pedido = pedidos.find(p => p.id === pedidoId);
+      if (pedido && pedido.vendedorId) {
+        adicionarTransacaoOutroUsuario(pedido.vendedorId, 'venda', pedido.total);
+      }
+
       return true;
     } catch (err) {
       console.error('Erro ao confirmar pagamento do pedido:', err);

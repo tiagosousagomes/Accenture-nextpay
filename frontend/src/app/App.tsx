@@ -34,8 +34,8 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <BankProvider>
-          <MarketplaceProvider>
-            <RewardsProvider>
+          <RewardsProvider>
+            <MarketplaceProvider>
               <Toaster position="top-right" richColors />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -136,8 +136,8 @@ export default function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-            </RewardsProvider>
-          </MarketplaceProvider>
+            </MarketplaceProvider>
+          </RewardsProvider>
         </BankProvider>
       </AuthProvider>
     </BrowserRouter>
