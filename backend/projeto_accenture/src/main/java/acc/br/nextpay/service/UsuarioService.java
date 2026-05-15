@@ -8,6 +8,7 @@ import acc.br.nextpay.model.Usuario;
 import acc.br.nextpay.model.enums.StatusConta;
 import acc.br.nextpay.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,11 +59,19 @@ public class UsuarioService {
 
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
 
+        // Enviar email de forma assíncrona (não bloqueia a resposta da API)
+        enviarEmailConfirmacaoAsync(usuarioSalvo.getEmail(), usuarioSalvo.getNome(), token);
+
+        return usuarioSalvo;
+    }
+
+    @Async
+    public void enviarEmailConfirmacaoAsync(String email, String nome, String token) {
         try {
             emailService.enviarEmail(
-                usuarioSalvo.getEmail(),
+                email,
                 "Código de confirmação - NextPay",
-                "Olá, " + usuarioSalvo.getNome() + "!\n\n" +
+                "Olá, " + nome + "!\n\n" +
                 "Seu código de confirmação é:\n\n" +
                 token + "\n\n" +
                 "Digite esse código na tela de confirmação para ativar sua conta."
@@ -70,13 +79,11 @@ public class UsuarioService {
         } catch (Exception e) {
             System.out.println("\n==================================================");
             System.out.println("  [DEV] EMAIL NÃO ENVIADO - USE ESTE CÓDIGO:");
-            System.out.println("  Email : " + usuarioSalvo.getEmail());
+            System.out.println("  Email : " + email);
             System.out.println("  Código: " + token);
             System.out.println("  Causa : " + e.getMessage());
             System.out.println("==================================================\n");
         }
-
-        return usuarioSalvo;
     }
 
     @Transactional
@@ -97,11 +104,17 @@ public class UsuarioService {
         usuario.setTokenConfirmacao(null);
         usuarioRepository.save(usuario);
 
+        // Enviar email de sucesso de forma assíncrona
+        enviarEmailSucessoAsync(usuario.getEmail(), usuario.getNome());
+    }
+
+    @Async
+    public void enviarEmailSucessoAsync(String email, String nome) {
         try {
             emailService.enviarEmail(
-                usuario.getEmail(),
+                email,
                 "Conta criada com sucesso - NextPay",
-                "Olá, " + usuario.getNome() + "!\n\n" +
+                "Olá, " + nome + "!\n\n" +
                 "Sua conta foi confirmada e criada com sucesso.\n\n" +
                 "Agora você já pode acessar o NextPay."
             );
