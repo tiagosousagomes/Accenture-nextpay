@@ -1,0 +1,10 @@
+Regra 1: O prazo máximo para devolução de produtos é de 30 dias a partir da data da compra, desde que o produto esteja em sua embalagem original e sem sinais de uso.
+Regra 2: Para solicitar um saque, o cliente deve ter saldo suficiente em sua conta corrente, incluindo o limite de cheque especial.
+Regra 3: Transferências PIX são processadas instantaneamente, 24 horas por dia, 7 dias por semana.
+Regra 4: A pontuação do usuário é atualizada a cada compra ou venda finalizada.
+Regra 5: Usuários com 0 a 4 pontos são Nível BRONZE.
+Regra 6: Usuários com 5 a 9 pontos são Nível PRATA.
+Regra 7: Usuários com 10 ou mais pontos são Nível OURO.
+Regra 8: O limite padrão de uma nova conta corrente é de R$ 300,00.
+Regra 9: Para abrir uma conta, é necessário CPF/CNPJ, e-mail e endereço válidos.
+Regra 10: Não é permitido comprar o próprio produto.
