@@ -1,0 +1,18 @@
+# Claude Code (never commit)
+.claude/
+
+# Frontend
+frontend/frontend-nextpay/node_modules/
+frontend/frontend-nextpay/dist/
+
+# Backend
+backend/nextpay/projeto_accenture/target/
+backend/nextpay/projeto_accenture/.idea/
+backend/nextpay/projeto_accenture/*.iml
+
+# Environment variables (never commit secrets)
+.env
+
+# OS
+.DS_Store
+Thumbs.db

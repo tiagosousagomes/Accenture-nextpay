@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend/nextpay/projeto_accenture
+      dockerfile: Dockerfile
+    container_name: nextpay-backend
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+    restart: unless-stopped
+    networks:
+      - nextpay-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/produtos > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
+  frontend:
+    build:
+      context: ./frontend/frontend-nextpay
+      dockerfile: Dockerfile
+    container_name: nextpay-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - nextpay-net
+
+networks:
+  nextpay-net:
+    driver: bridge
