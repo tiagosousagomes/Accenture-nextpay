@@ -55,7 +55,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const loadProdutos = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/produtos');
+      const response = await fetch('/api/produtos');
       if (response.ok) {
         const data = await response.json();
         console.log(data);
@@ -86,7 +86,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const loadPedidos = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/pedidos');
+      const response = await fetch('/api/pedidos');
       if (response.ok) {
         const data = await response.json();
 
@@ -145,7 +145,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
           try {
 
-            await fetch(`http://localhost:8080/api/pedidos/${pedido.id}/cancelar`, {
+            await fetch(`/api/pedidos/${pedido.id}/cancelar`, {
               method: 'PUT'
             });
 
@@ -206,7 +206,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         quantidade: quantidade
       };
 
-      const response = await fetch('http://localhost:8080/api/pedidos/reservar', {
+      const response = await fetch('/api/pedidos/reservar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -252,7 +252,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
     setIsLoading(true);
     if (item?.idPedido) {
       try {
-        await fetch(`http://localhost:8080/api/pedidos/${item.idPedido}/cancelar`, {
+        await fetch(`/api/pedidos/${item.idPedido}/cancelar`, {
           method: 'PUT'
         });
       } catch (err) {
@@ -288,7 +288,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
       for (const item of itens) {
         const valorEmMoedas = item.produto.preco * item.quantidade * 10;
         const moedasParaEsteItem = Math.min(moedasRestantes, valorEmMoedas);
-        const response = await fetch(`http://localhost:8080/api/pedidos/${item.idPedido}/confirmar`, {
+        const response = await fetch(`/api/pedidos/${item.idPedido}/confirmar`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ moedasUsadas }),
@@ -320,7 +320,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
     setIsLoading(true);
     try {
       // Confirmar (Muda status para Finalizado)
-      const confirmResponse = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/confirmar`, {
+      const confirmResponse = await fetch(`/api/pedidos/${pedidoId}/confirmar`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ moedasUsadas }),
@@ -375,7 +375,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const cancelarPedido = async (pedidoId: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/pedidos/${pedidoId}/cancelar`, {
+      const response = await fetch(`/api/pedidos/${pedidoId}/cancelar`, {
         method: 'PUT'
       });
 
@@ -423,7 +423,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         fotoProduto: produto.imagem || ''
       };
 
-      const response = await fetch(`http://localhost:8080/api/produtos/usuario/${currentUserId}`, {
+      const response = await fetch(`/api/produtos/usuario/${currentUserId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -458,7 +458,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         fotoProduto: produtoAtualizado.imagem || ''
       };
 
-      const response = await fetch(`http://localhost:8080/api/produtos/${id}/usuario/${currentUserId}`, {
+      const response = await fetch(`/api/produtos/${id}/usuario/${currentUserId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -482,7 +482,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/produtos/${id}/usuario/${currentUserId}`, {
+      const response = await fetch(`/api/produtos/${id}/usuario/${currentUserId}`, {
         method: 'DELETE'
       });
 

@@ -48,7 +48,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const currentUserId = user.id || (user as any).usuarioId;
       if (!currentUserId) return;
 
-      const response = await fetch(`http://localhost:8080/api/usuarios/${currentUserId}`);
+      const response = await fetch(`/api/usuarios/${currentUserId}`);
       if (response.ok) {
         const fullUserData = await response.json();
 
@@ -66,7 +66,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSaldoMoedas(fullUserData.pontuacao || 0);
 
         // Buscar transações do backend
-        const transResponse = await fetch(`http://localhost:8080/api/transacoes/usuario/${currentUserId}`);
+        const transResponse = await fetch(`/api/transacoes/usuario/${currentUserId}`);
         if (transResponse.ok) {
           const transData = await transResponse.json();
           // Mapear transações do backend para o formato do frontend
@@ -132,7 +132,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         valor: valor
       };
 
-      const response = await fetch('http://localhost:8080/api/carteiras/deposito', {
+      const response = await fetch('/api/carteiras/deposito', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -166,7 +166,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         valor: valor
       };
 
-      const response = await fetch('http://localhost:8080/api/carteiras/saque', {
+      const response = await fetch('/api/carteiras/saque', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -200,7 +200,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         valor: valor
       };
 
-      const response = await fetch('http://localhost:8080/api/carteiras/transferencia', {
+      const response = await fetch('/api/carteiras/transferencia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -234,7 +234,7 @@ export const BankProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         valor: valor
       };
 
-      const response = await fetch('http://localhost:8080/api/carteiras/pix', {
+      const response = await fetch('/api/carteiras/pix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

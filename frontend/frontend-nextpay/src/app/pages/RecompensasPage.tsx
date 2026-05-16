@@ -27,7 +27,7 @@ export const RecompensasPage: React.FC = () => {
     const fetchUserData = async () => {
       if (user?.id) {
         try {
-          const response = await fetch(`http://localhost:8080/api/usuarios/${user.id}`);
+          const response = await fetch(`/api/usuarios/${user.id}`);
           if (response.ok) {
             const data = await response.json();
             setApiUser(data);

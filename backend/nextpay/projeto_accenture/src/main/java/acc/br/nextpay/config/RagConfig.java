@@ -1,7 +1,6 @@
 package acc.br.nextpay.config;
 
 import dev.langchain4j.data.document.Document;
-import dev.langchain4j.data.document.parser.TextDocumentParser;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel;
@@ -14,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
-import static dev.langchain4j.data.document.loader.FileSystemDocumentLoader.loadDocument;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class RagConfig {
@@ -34,11 +33,9 @@ public class RagConfig {
             EmbeddingModel embeddingModel,
             EmbeddingStore<TextSegment> embeddingStore) throws java.io.IOException {
 
-        // Mantém o uso original de loadDocument(), mas agora com o arquivo
-        // localizado corretamente no classpath (src/main/resources)
-        Document document = loadDocument(
-                new ClassPathResource("business_rules.txt").getFile().toPath(),
-                new TextDocumentParser());
+        ClassPathResource resource = new ClassPathResource("business_rules.txt");
+        String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        Document document = Document.from(content);
 
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .embeddingStore(embeddingStore)
