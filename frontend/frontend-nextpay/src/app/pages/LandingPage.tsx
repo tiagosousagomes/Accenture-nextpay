@@ -95,7 +95,7 @@ export const LandingPage: React.FC = () => {
                   <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 text-white">
                     <Gift size={20} className="mb-2" />
                     <p className="text-2xl font-bold">850</p>
-                    <p className="text-sm opacity-80">MarketCoins</p>
+                    <p className="text-sm opacity-80">NextCoins</p>
                   </div>
                 </div>
               </div>
@@ -185,7 +185,7 @@ export const LandingPage: React.FC = () => {
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-sm text-gray-600">
                   <CheckCircle size={16} className="text-green-600" />
-                  MarketCoins em cada compra
+                  NextCoins em cada compra
                 </li>
                 <li className="flex items-center gap-2 text-sm text-gray-600">
                   <CheckCircle size={16} className="text-green-600" />
@@ -265,7 +265,7 @@ export const LandingPage: React.FC = () => {
                 <p className="text-sm text-gray-600 text-center mb-4">{item.xp}</p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">MarketCoins:</span>
+                    <span className="text-gray-600">NextCoins:</span>
                     <span className="font-bold text-gray-800">{item.moedas}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
