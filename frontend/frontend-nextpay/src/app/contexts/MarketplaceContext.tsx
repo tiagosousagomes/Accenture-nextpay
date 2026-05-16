@@ -66,6 +66,7 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
           return {
             id: (p.id || '').toString(),
             nome: p.nome || 'Produto sem nome',
+            categoria: p.categoria || 'Geral',
             descricao: p.descricao || '',
             preco: p.preco || 0,
             estoque: p.quantidadeEstoque || 0,
@@ -420,7 +421,8 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         descricao: produto.descricao || '',
         preco: produto.preco,
         quantidadeEstoque: produto.estoque,
-        fotoProduto: produto.imagem || ''
+        fotoProduto: produto.imagem || '',
+        categoria: produto.categoria || '',
       };
 
       const response = await fetch(`/api/produtos/usuario/${currentUserId}`, {
@@ -455,7 +457,8 @@ export const MarketplaceProvider: React.FC<{ children: ReactNode }> = ({ childre
         descricao: produtoAtualizado.descricao || '',
         preco: produtoAtualizado.preco,
         quantidadeEstoque: produtoAtualizado.estoque,
-        fotoProduto: produtoAtualizado.imagem || ''
+        fotoProduto: produtoAtualizado.imagem || '',
+        categoria: produtoAtualizado.categoria || ''
       };
 
       const response = await fetch(`/api/produtos/${id}/usuario/${currentUserId}`, {

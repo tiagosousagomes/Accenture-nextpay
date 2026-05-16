@@ -24,7 +24,8 @@ export const ExtratoPage: React.FC = () => {
     if (
       tipo === 'deposito' ||
       tipo === 'transferencia_recebida' ||
-      tipo === 'pix_recebido'
+      tipo === 'pix_recebido' ||
+      descricao?.toLowerCase().includes('venda')
     ) {
       return true;
     }
@@ -243,7 +244,7 @@ export const ExtratoPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className={`text-2xl font-bold ${getValorColor(transacao.tipo, transacao.descricao)}`}>
-                          {getSinal(transacao.tipo)} R$ {transacao.valor.toFixed(2)}
+                          {getSinal(transacao.tipo, transacao.descricao)} R$ {transacao.valor.toFixed(2)}
                         </p>
                       </div>
                     </div>

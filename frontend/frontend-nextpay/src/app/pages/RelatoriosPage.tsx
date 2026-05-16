@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { useMarketplace } from '../contexts/MarketplaceContext';
 import {
@@ -14,7 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, Package, Users, DollarSign, Printer } from 'lucide-react';
+import { TrendingUp, Package, Users, DollarSign, Printer, X, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 
@@ -23,84 +23,95 @@ import { useAuth } from '../contexts/AuthContext';
 export const RelatoriosPage: React.FC = () => {
   const { user } = useAuth();
   const { getPedidosByVendedor, produtos } = useMarketplace();
+  const [showModal, setShowModal] = useState(false);
 
-  const imprimirRelatorio = () => {
+  const imprimirPDF = (tipo: 'completo' | 'faturamento' | 'produtos' | 'categorias' | 'clientes') => {
     const doc = new jsPDF();
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-    // Cabeçalho
-    doc.setFontSize(20);
-    doc.text('NexttPay - Relatorio de Vendas', 20, 20);
+    const header = (titulo: string) => {
+      doc.setFontSize(20);
+      doc.setTextColor(0, 95, 115); // Cor petroleo
+      doc.text('NextPay - Relatório de Vendas', 20, 20);
+      doc.setFontSize(14);
+      doc.setTextColor(100, 100, 100);
+      doc.text(titulo, 20, 30);
+      doc.setFontSize(10);
+      doc.text(`Data de Emissão: ${dataAtual}`, 20, 38);
+      doc.line(20, 42, 190, 42);
+      return 50;
+    };
 
-    doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 35);
-    doc.text(`Total de Vendas: ${pedidosPagos.length}`, 20, 42);
-    doc.text(`Faturamento Total: R$ ${faturamentoTotal.toFixed(2)}`, 20, 49);
+    let y = 0;
 
-    doc.line(20, 54, 190, 54);
+    if (tipo === 'completo' || tipo === 'faturamento') {
+      y = header('Resumo de Faturamento (Pedidos PAGOS)');
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Faturamento Total: R$ ${faturamentoTotal.toFixed(2)}`, 20, y);
+      doc.text(`Total de Pedidos Pagos: ${pedidosPagos.length}`, 20, y + 10);
+      doc.text(`Média por Pedido: R$ ${(faturamentoTotal / (pedidosPagos.length || 1)).toFixed(2)}`, 20, y + 20);
+      y += 40;
+    }
 
-    // Produtos Mais Vendidos
-    doc.setFontSize(14);
-    doc.text('Top 5 Produtos Mais Vendidos', 20, 64);
-
-    doc.setFontSize(10);
-    let y = 74;
-
-    produtosMaisVendidos.forEach((produto, index) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
+    if (tipo === 'completo' || tipo === 'produtos') {
+      if (tipo !== 'completo') {
+        y = header('TOP 3 Produtos Mais Vendidos');
+      } else {
+        doc.setFontSize(14);
+        doc.text('TOP 3 Produtos Mais Vendidos', 20, y);
+        y += 10;
       }
 
-      doc.text(`${index + 1}. ${produto.nome}`, 20, y);
-      doc.text(`${produto.quantidade} unidades`, 20, y + 5);
-      doc.text(`R$ ${produto.valor.toFixed(2)}`, 160, y);
-
-      y += 15;
-    });
-
-    // Nova página para categorias
-    doc.addPage();
-    y = 20;
-
-    doc.setFontSize(14);
-    doc.text('Vendas por Categoria', 20, y);
-    y += 10;
-
-    doc.setFontSize(10);
-    dadosCategoria.forEach((cat) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text(cat.categoria, 20, y);
-      doc.text(`R$ ${cat.valor.toFixed(2)}`, 160, y);
+      doc.setFontSize(10);
+      produtosMaisVendidos.forEach((p, i) => {
+        doc.text(`${i + 1}. ${p.nome} - ${p.quantidade} unidades`, 25, y);
+        doc.text(`Faturamento: R$ ${p.valor.toFixed(2)}`, 160, y, { align: 'right' });
+        y += 8;
+      });
       y += 10;
-    });
+    }
 
-    // Top Clientes
-    doc.addPage();
-    y = 20;
-
-    doc.setFontSize(14);
-    doc.text('Top 5 Clientes', 20, y);
-    y += 10;
-
-    doc.setFontSize(10);
-    topClientes.forEach((cliente, index) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
+    if (tipo === 'completo' || tipo === 'categorias') {
+      if (tipo !== 'completo') {
+        y = header('Faturamento por Categoria');
+      } else {
+        if (y > 250) { doc.addPage(); y = 20; }
+        doc.setFontSize(14);
+        doc.text('Faturamento por Categoria', 20, y);
+        y += 10;
       }
 
-      doc.text(`${index + 1}. Cliente #${cliente.id}`, 20, y);
-      doc.text(`${cliente.compras} compras`, 20, y + 5);
-      doc.text(`R$ ${cliente.total.toFixed(2)}`, 160, y);
-      y += 15;
-    });
+      doc.setFontSize(10);
+      dadosCategoria.forEach((c) => {
+        doc.text(`${c.categoria}`, 25, y);
+        doc.text(`R$ ${c.valor.toFixed(2)}`, 160, y, { align: 'right' });
+        y += 8;
+      });
+      y += 10;
+    }
 
-    doc.save(`relatorio-vendas-${new Date().getTime()}.pdf`);
-    toast.success('Relatório baixado com sucesso!');
+    if (tipo === 'completo' || tipo === 'clientes') {
+      if (tipo !== 'completo') {
+        y = header('TOP 5 Clientes (Por Número de Pedidos)');
+      } else {
+        if (y > 250) { doc.addPage(); y = 20; }
+        doc.setFontSize(14);
+        doc.text('TOP 5 Clientes (Por Número de Pedidos)', 20, y);
+        y += 10;
+      }
+
+      doc.setFontSize(10);
+      topClientes.forEach((c, i) => {
+        doc.text(`${i + 1}. Cliente #${c.id} - ${c.compras} pedidos`, 25, y);
+        doc.text(`Total Gasto: R$ ${c.total.toFixed(2)}`, 160, y, { align: 'right' });
+        y += 8;
+      });
+    }
+
+    doc.save(`relatorio-${tipo}-${new Date().getTime()}.pdf`);
+    toast.success(`Relatório ${tipo} baixado com sucesso!`);
+    setShowModal(false);
   };
 
   const pedidosPagos = getPedidosByVendedor(user?.id || '').filter(p => p.status === 'PAID');
@@ -131,7 +142,7 @@ export const RelatoriosPage: React.FC = () => {
       };
     })
     .sort((a, b) => b.quantidade - a.quantidade)
-    .slice(0, 5);
+    .slice(0, 3);
 
   // Vendas por Categoria
   const vendasPorCategoria = new Map<string, number>();
@@ -168,10 +179,10 @@ export const RelatoriosPage: React.FC = () => {
       compras: stats.quantidade,
       total: stats.total,
     }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => b.compras - a.compras)
     .slice(0, 5);
 
-  const COLORS = ['#0329AB', '#4D63FE', '#5E57FD', '#8A2DFD', '#A78BFA'];
+  const COLORS = ['#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00'];
 
   return (
     <Layout>
@@ -182,11 +193,11 @@ export const RelatoriosPage: React.FC = () => {
             <p className="text-gray-600 mt-1">Insights sobre o desempenho da loja</p>
           </div>
           <button
-            onClick={imprimirRelatorio}
+            onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-petroleo-900 to-petroleo-700 text-white rounded-lg font-semibold hover:shadow-lg transition"
           >
             <Printer size={20} />
-            Imprimir Relatório
+            Exportar PDF
           </button>
         </div>
 
@@ -266,7 +277,7 @@ export const RelatoriosPage: React.FC = () => {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="quantidade" fill="#0329AB" name="Quantidade Vendida" />
+                  <Bar dataKey="quantidade" fill="#005f73" name="Quantidade Vendida" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -309,8 +320,8 @@ export const RelatoriosPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Produtos */}
           <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Top 5 Produtos por Faturamento
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              TOP 3 Produtos Mais Vendidos
             </h2>
             <div className="space-y-3">
               {produtosMaisVendidos.map((produto, index) => (
@@ -336,7 +347,7 @@ export const RelatoriosPage: React.FC = () => {
           {/* Top Clientes */}
           <div className="bg-white p-6 rounded-xl shadow-md">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Top 5 Clientes
+              Top 5 Clientes (Por Volume de Pedidos)
             </h2>
             <div className="space-y-3">
               {topClientes.map((cliente, index) => (
@@ -360,6 +371,96 @@ export const RelatoriosPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Exportação */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-petroleo-900 text-white">
+              <div className="flex items-center gap-3">
+                <FileText className="text-white" size={24} />
+                <h3 className="text-xl font-bold">Exportar Relatório</h3>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-gray-600 text-sm">Selecione o tipo de relatório que deseja exportar em formato PDF:</p>
+
+              <div className="grid gap-3">
+                <button
+                  onClick={() => imprimirPDF('completo')}
+                  className="flex items-center justify-between p-4 bg-gray-50 hover:bg-petroleo-50 border border-gray-100 hover:border-petroleo-200 rounded-xl transition group text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800 group-hover:text-petroleo-700">Relatório Completo</p>
+                    <p className="text-xs text-gray-500">Todos os indicadores em um único documento</p>
+                  </div>
+                  <Printer className="text-gray-400 group-hover:text-petroleo-600" size={18} />
+                </button>
+
+                <button
+                  onClick={() => imprimirPDF('faturamento')}
+                  className="flex items-center justify-between p-4 bg-gray-50 hover:bg-petroleo-50 border border-gray-100 hover:border-petroleo-200 rounded-xl transition group text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800 group-hover:text-petroleo-700">Faturamento Total</p>
+                    <p className="text-xs text-gray-500">Apenas pedidos com status PAGO</p>
+                  </div>
+                  <DollarSign className="text-gray-400 group-hover:text-petroleo-600" size={18} />
+                </button>
+
+                <button
+                  onClick={() => imprimirPDF('produtos')}
+                  className="flex items-center justify-between p-4 bg-gray-50 hover:bg-petroleo-50 border border-gray-100 hover:border-petroleo-200 rounded-xl transition group text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800 group-hover:text-petroleo-700">TOP 3 Produtos</p>
+                    <p className="text-xs text-gray-500">Mais vendidos por quantidade</p>
+                  </div>
+                  <Package className="text-gray-400 group-hover:text-petroleo-600" size={18} />
+                </button>
+
+                <button
+                  onClick={() => imprimirPDF('categorias')}
+                  className="flex items-center justify-between p-4 bg-gray-50 hover:bg-petroleo-50 border border-gray-100 hover:border-petroleo-200 rounded-xl transition group text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800 group-hover:text-petroleo-700">Por Categoria</p>
+                    <p className="text-xs text-gray-500">Distribuição de vendas por categoria</p>
+                  </div>
+                  <TrendingUp className="text-gray-400 group-hover:text-petroleo-600" size={18} />
+                </button>
+
+                <button
+                  onClick={() => imprimirPDF('clientes')}
+                  className="flex items-center justify-between p-4 bg-gray-50 hover:bg-petroleo-50 border border-gray-100 hover:border-petroleo-200 rounded-xl transition group text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800 group-hover:text-petroleo-700">TOP 5 Clientes</p>
+                    <p className="text-xs text-gray-500">Maiores compradores por volume</p>
+                  </div>
+                  <Users className="text-gray-400 group-hover:text-petroleo-600" size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-6 py-2 text-gray-600 font-semibold hover:text-gray-800 transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
