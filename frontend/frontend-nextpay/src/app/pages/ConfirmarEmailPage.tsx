@@ -23,7 +23,7 @@ export const ConfirmarEmailPage: React.FC = () => {
     setErro("");
 
     try {
-      const response = await fetch("http://localhost:8080/api/usuarios/confirmar-email", {
+      const response = await fetch("/api/usuarios/confirmar-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -11,10 +11,10 @@ COPY src ./src
 RUN mvn clean package -DskipTests -q --no-transfer-progress
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-RUN addgroup -S nextpay && adduser -S nextpay -G nextpay
+RUN groupadd -r nextpay && useradd -r -g nextpay nextpay
 USER nextpay
 
 COPY --from=builder /app/target/*.jar app.jar

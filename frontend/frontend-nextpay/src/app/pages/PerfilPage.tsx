@@ -33,7 +33,7 @@ export const PerfilPage: React.FC = () => {
     const fetchUserData = async () => {
       if (user?.id) {
         try {
-          const response = await fetch(`http://localhost:8080/api/usuarios/${user.id}`);
+          const response = await fetch(`/api/usuarios/${user.id}`);
           if (response.ok) {
             const data = await response.json();
             setApiUser(data);
@@ -80,7 +80,7 @@ export const PerfilPage: React.FC = () => {
           : fotoBase64;
       }
 
-      const response = await fetch(`http://localhost:8080/api/usuarios/${user?.id}`, {
+      const response = await fetch(`/api/usuarios/${user?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

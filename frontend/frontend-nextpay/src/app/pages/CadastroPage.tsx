@@ -164,7 +164,7 @@ export const CadastroPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/usuarios?cep=${encodeURIComponent(formData.cep)}&numero=${encodeURIComponent(formData.numero)}`,
+      const response = await fetch(`/api/usuarios?cep=${encodeURIComponent(formData.cep)}&numero=${encodeURIComponent(formData.numero)}`,
         {
           method: 'POST',
           headers: {

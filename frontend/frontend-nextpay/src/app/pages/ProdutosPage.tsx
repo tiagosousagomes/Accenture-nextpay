@@ -21,7 +21,7 @@ export const ProdutosPage: React.FC = () => {
     if (!user?.id) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/produtos/usuario/${user.id}`);
+      const response = await fetch(`/api/produtos/usuario/${user.id}`);
 
       if (!response.ok) {
         throw new Error("Erro ao carregar produtos da loja");

@@ -194,7 +194,7 @@ export const ContaCorrentePage: React.FC = () => {
     try {
 
       const response = await fetch(
-        `http://localhost:8080/api/carteiras/pix/buscar?chave=${chavePix}`
+        `/api/carteiras/pix/buscar?chave=${chavePix}`
       );
 
       if (!response.ok) {
